@@ -1,0 +1,21 @@
+- name: install zscaler repo
+  ansible.builtin.template:
+    src: zscaler.repo.j2
+    dest: /etc/yum.repos.d/zscaler.repo
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: install zpa-connector
+  ansible.builtin.yum:
+    name: zpa-connector
+    state: latest
+
+- name: install key file
+  ansible.builtin.copy:
+    src: provision_key
+    dest: /opt/zscaler/var/provision_key
+    owner: root
+    group: root
+    mode: '0664'
+  notify: restart zscaler
