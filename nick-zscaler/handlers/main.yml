@@ -1,0 +1,5 @@
+---
+- name: restart zscaler
+  ansible.builtin.service:
+    name: zpa-connector
+    state: restarted
