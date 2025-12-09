@@ -1,0 +1,87 @@
+---
+- name: ZPA App Connector Upgrade
+  hosts: all
+  gather_facts: no
+  become: false
+
+  tasks:
+    - name: Gather the package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Populate service facts
+      ansible.builtin.service_facts:
+
+    - name: Add header entry to file - CSV
+      lineinfile:
+        dest: "{{ playbook_dir }}/zpa_connector_pre_upgrade.csv"
+        line: "hostname,zpa_connector_version,status"
+        create: yes
+        state: present
+      run_once: true
+      delegate_to: localhost
+
+    - name: Add entry to file - CSV
+      lineinfile:
+        dest: "{{ playbook_dir }}/zpa_connector_pre_upgrade.csv"
+        line: "{{ inventory_hostname }},{{ ansible_facts.packages['zpa-connector'][0].version }},{{ ansible_facts.services['zpa-connector.service'].state }}"
+      throttle: 1
+      delegate_to: localhost
+
+    - name: SEND SUCCESS RESULTS EMAIL with PRE CHANGE OUTPUT
+      community.general.mail:
+        host: 
+        port: 25
+        to: "{{ email_to }}"
+        from: ""
+        subject: ZPA APP CONNECTOR PRE UPGRADE
+        body: |
+          Please see attached file
+        attach: "{{ playbook_dir }}/zpa_connector_pre_upgrade.csv"
+      run_once: true
+      delegate_to: localhost
+
+    - name: Inject Y into update prompt
+      ansible.builtin.expect:
+        command: sudo /bin/yum update zpa-connector
+        responses:
+          "Is this OK": "y"
+
+    - name: Run raw command to restart the zpa-connector service
+      ansible.builtin.raw: sudo /bin/systemctl restart zpa-connector
+
+    - name: Gather the package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Populate service facts
+      ansible.builtin.service_facts:
+
+    - name: Add header entry to file - CSV
+      lineinfile:
+        dest: "{{ playbook_dir }}/zpa_connector_post_upgrade.csv"
+        line: "hostname,zpa_connector_version,status"
+        create: yes
+        state: present
+      run_once: true
+      delegate_to: localhost
+
+    - name: Add entry to file - CSV
+      lineinfile:
+        dest: "{{ playbook_dir }}/zpa_connector_post_upgrade.csv"
+        line: "{{ inventory_hostname }},{{ ansible_facts.packages['zpa-connector'][0].version }},{{ ansible_facts.services['zpa-connector.service'].state }}"
+      throttle: 1
+      delegate_to: localhost
+
+    - name: SEND SUCCESS RESULTS EMAIL with POST CHANGE OUTPUT
+      community.general.mail:
+        host: 
+        port: 25
+        to: "{{ email_to }}"
+        from: ""
+        subject: ZPA APP CONNECTOR POST UPGRADE
+        body: |
+          Please see attached file
+        attach: "{{ playbook_dir }}/zpa_connector_post_upgrade.csv"
+      run_once: true
+      delegate_to: localhost
